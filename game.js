@@ -1,7 +1,10 @@
 var game = new Phaser.Game(700, 500, '', Phaser.CANVAS, {preload: preload, create: create, update: update, render: render});
 
 var acting_sprite,
-    target_sprite;
+    target_sprite,
+    sight_line;
+
+var all_lines = [];
 
 function preload(){
     game.load.image('blue_archer', 'sprites/blue_archer.png');
@@ -11,18 +14,20 @@ function preload(){
     game.load.image('red_archer', 'sprites/red_archer.png');
     game.load.image('red_knight', 'sprites/red_knight.png');
     game.load.image('red_mage', 'sprites/red_mage.png');
+    game.load.image('terrain_0', 'sprites/terrain_0.png');
     game.load.image('terrain_1', 'sprites/terrain_1.png');
     game.load.image('terrain_2', 'sprites/terrain_2.png');
     game.load.image('terrain_3', 'sprites/terrain_3.png');
     game.load.image('terrain_4', 'sprites/terrain_4.png');
     game.load.image('terrain_5', 'sprites/terrain_5.png');
-    game.load.image('terrain_6', 'sprites/terrain_6.png');
     game.load.spritesheet('move_target', 'sprites/move_target.png', 100, 100, 6);
     game.load.spritesheet('hit_target', 'sprites/hit_target.png', 100, 100, 6);
     game.load.spritesheet('rotate_target', 'sprites/rotate_target.png', 100, 100, 6);
+    game.load.text('line_data', 'line_data.json');
 }
 
 function create(){
+    Phaser.Sprite.prototype.bound_lines = [];
     Phaser.Sprite.prototype.is_terrain = false;
     Phaser.Sprite.prototype.team = 'blue';
 
@@ -86,25 +91,28 @@ function create(){
         hit_targets.setAll('exists', false);
     };
 
-    terrain_1 = game.add.sprite(150, 150, 'terrain_1');
-    terrain_2 = game.add.sprite(350, 150, 'terrain_2');
-    terrain_3 = game.add.sprite(550, 150, 'terrain_3');
-    terrain_4 = game.add.sprite(150, 350, 'terrain_4');
-    terrain_5 = game.add.sprite(350, 350, 'terrain_5');
-    terrain_6 = game.add.sprite(550, 350, 'terrain_6');
+    terrain_0 = game.add.sprite(150, 150, 'terrain_0');
+    terrain_1 = game.add.sprite(350, 150, 'terrain_1');
+    terrain_2 = game.add.sprite(550, 150, 'terrain_2');
+    terrain_3 = game.add.sprite(150, 350, 'terrain_3');
+    terrain_4 = game.add.sprite(350, 350, 'terrain_4');
+    terrain_5 = game.add.sprite(550, 350, 'terrain_5');
 
     all_terrain = [
+        terrain_0,
         terrain_1,
         terrain_2,
         terrain_3,
         terrain_4,
-        terrain_5,
-        terrain_6
+        terrain_5
     ];
+
+    lines = JSON.parse(game.cache.getText('line_data'));
 
     for (var i = 0; i < all_terrain.length; i++) {
         all_terrain[i].anchor.setTo(0.5);
         all_terrain[i].is_terrain = true;
+        all_terrain[i].bound_lines = lines[i][0];
     };
 
     for (var i = 0; i < all_terrain.length; i++) {
@@ -118,7 +126,7 @@ function create(){
     blue_mage = game.add.sprite(550, 50, 'blue_mage');
     red_archer = game.add.sprite(550, 450, 'red_archer');
     red_archer.team = 'red';
-    red_knight = game.add.sprite(350, 450, 'red_knight');
+    red_knight = game.add.sprite(250, 150, 'red_knight');
     red_knight.team = 'red';
     red_mage = game.add.sprite(150, 450, 'red_mage');
     red_mage.team = 'red';
@@ -143,6 +151,8 @@ function create(){
     game.world.bringToTop(move_targets);
     game.world.bringToTop(hit_targets);
     game.world.bringToTop(rotate_targets);
+
+    draw_lines();
 }
 
 function update(){
@@ -152,7 +162,11 @@ function update(){
 }
 
 function render(){
-
+    game.debug.geom(sight_line);
+    
+    for (var i = 0; i < all_lines.length; i++) {
+        game.debug.geom(all_lines[i]);
+    }
 }
 
 function occupied(x, y){
@@ -185,6 +199,21 @@ function sprite_from_point(x, y){
     }
 
     return undefined;
+}
+
+function draw_lines(){
+    // grab terrain tile
+    // access lines at index, terrain.angle
+    // loop through returned array
+    // draw line at each item's coords
+    // push line onto global var of all lines
+    all_lines = [];
+    for (var i = 0; i < all_terrain.length; i++) {
+        var line_array = lines[i][all_terrain[i].angle];
+        for (var j = 0; j < line_array.length; j++) {
+            all_lines.push(new Phaser.Line(line_array[j][0], line_array[j][1], line_array[j][2], line_array[j][3]));
+        }
+    }
 }
 
 function move(unit){
@@ -284,4 +313,10 @@ function submit_rotate(){
     target_sprite.angle += 90;
 
     rotate_targets.setAll('exists', false);
+
+    draw_lines();
+}
+
+function has_line_of_sight(unit, target){
+    sight_line = new Phaser.Line(unit.x, unit.y, target.x, target.y);
 }
