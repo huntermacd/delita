@@ -121,14 +121,14 @@ function create(){
         rotate_targets.setAll('exists', false);
     };
 
-    blue_archer = game.add.sprite(150, 50, 'blue_archer');
+    blue_archer = game.add.sprite(150, 250, 'blue_archer');
     blue_knight = game.add.sprite(350, 50, 'blue_knight');
     blue_mage = game.add.sprite(550, 50, 'blue_mage');
     red_archer = game.add.sprite(550, 450, 'red_archer');
     red_archer.team = 'red';
-    red_knight = game.add.sprite(250, 150, 'red_knight');
+    red_knight = game.add.sprite(450, 250, 'red_knight');
     red_knight.team = 'red';
-    red_mage = game.add.sprite(150, 450, 'red_mage');
+    red_mage = game.add.sprite(250, 450, 'red_mage');
     red_mage.team = 'red';
 
     all_units = [
