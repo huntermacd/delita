@@ -17,8 +17,9 @@ function preload(){
     game.load.image('terrain_4', 'sprites/terrain_4.png');
     game.load.image('terrain_5', 'sprites/terrain_5.png');
     game.load.image('terrain_6', 'sprites/terrain_6.png');
-    game.load.spritesheet('move_target', 'sprites/move_target.png', 100, 100, 5);
-    game.load.spritesheet('hit_target', 'sprites/hit_target.png', 100, 100, 5);
+    game.load.spritesheet('move_target', 'sprites/move_target.png', 100, 100, 6);
+    game.load.spritesheet('hit_target', 'sprites/hit_target.png', 100, 100, 6);
+    game.load.spritesheet('rotate_target', 'sprites/rotate_target.png', 100, 100, 6);
 }
 
 function create(){
@@ -29,6 +30,7 @@ function create(){
 
     move_targets = game.add.group();
     hit_targets = game.add.group();
+    rotate_targets = game.add.group();
 
     // "extended sprite"
     Target = function(game, x, y, key){
@@ -40,8 +42,7 @@ function create(){
 
         this.inputEnabled = true;
         this.input.useHandCursor = true;
-        // this.events.onInputDown.add(submit_move, this);
-    }
+    };
 
     Target.prototype = Object.create(Phaser.Sprite.prototype);
     Target.prototype.constructor = Target;
@@ -50,7 +51,7 @@ function create(){
         Target.call(this, game, x, y, key);
 
         this.events.onInputDown.add(submit_move, this);
-    }
+    };
 
     MoveTarget.prototype = Object.create(Target.prototype);
     MoveTarget.prototype.constructor = MoveTarget;
@@ -59,10 +60,19 @@ function create(){
         Target.call(this, game, x, y, key);
 
         this.events.onInputDown.add(submit_hit, this);
-    }
+    };
 
     HitTarget.prototype = Object.create(Target.prototype);
     HitTarget.prototype.constructor = HitTarget;
+
+    RotateTarget = function(game, x, y, key){
+        Target.call(this, game, x, y, key);
+
+        this.events.onInputDown.add(submit_rotate, this);
+    };
+
+    RotateTarget.prototype = Object.create(Target.prototype);
+    RotateTarget.prototype.constructor = RotateTarget;
 
     for (var i = 0; i < 8; i++) {
         move_target = new MoveTarget(game, 0, 0, 'move_target');
@@ -74,6 +84,33 @@ function create(){
         hit_target = new HitTarget(game, 0, 0, 'hit_target');
         hit_targets.add(game.add.existing(hit_target));
         hit_targets.setAll('exists', false);
+    };
+
+    terrain_1 = game.add.sprite(150, 150, 'terrain_1');
+    terrain_2 = game.add.sprite(350, 150, 'terrain_2');
+    terrain_3 = game.add.sprite(550, 150, 'terrain_3');
+    terrain_4 = game.add.sprite(150, 350, 'terrain_4');
+    terrain_5 = game.add.sprite(350, 350, 'terrain_5');
+    terrain_6 = game.add.sprite(550, 350, 'terrain_6');
+
+    all_terrain = [
+        terrain_1,
+        terrain_2,
+        terrain_3,
+        terrain_4,
+        terrain_5,
+        terrain_6
+    ];
+
+    for (var i = 0; i < all_terrain.length; i++) {
+        all_terrain[i].anchor.setTo(0.5);
+        all_terrain[i].is_terrain = true;
+    };
+
+    for (var i = 0; i < all_terrain.length; i++) {
+        rotate_target = new RotateTarget(game, all_terrain[i].x, all_terrain[i].y, 'rotate_target');
+        rotate_targets.add(game.add.existing(rotate_target));
+        rotate_targets.setAll('exists', false);
     };
 
     blue_archer = game.add.sprite(150, 50, 'blue_archer');
@@ -101,28 +138,11 @@ function create(){
         all_units[i].addChild(game.add.text(-4, -12, all_units[i].health, {fontSize: 16}));
     };
 
-    terrain_1 = game.add.sprite(150, 150, 'terrain_1');
-    terrain_2 = game.add.sprite(350, 150, 'terrain_2');
-    terrain_3 = game.add.sprite(550, 150, 'terrain_3');
-    terrain_4 = game.add.sprite(150, 350, 'terrain_4');
-    terrain_5 = game.add.sprite(350, 350, 'terrain_5');
-    terrain_6 = game.add.sprite(550, 350, 'terrain_6');
-
-    all_terrain = [
-        terrain_1,
-        terrain_2,
-        terrain_3,
-        terrain_4,
-        terrain_5,
-        terrain_6
-    ];
-
-    for (var i = 0; i < all_terrain.length; i++) {
-        all_terrain[i].anchor.setTo(0.5);
-        all_terrain[i].is_terrain = true;
-    };
-
     all_sprites = all_units.concat(all_terrain);
+
+    game.world.bringToTop(move_targets);
+    game.world.bringToTop(hit_targets);
+    game.world.bringToTop(rotate_targets);
 }
 
 function update(){
@@ -253,4 +273,15 @@ function submit_hit(){
     target_sprite.health--;
 
     hit_targets.setAll('exists', false);
+}
+
+function mage_special(){
+    rotate_targets.setAll('exists', true);
+}
+
+function submit_rotate(){
+    target_sprite = sprite_from_point(this.x, this.y);
+    target_sprite.angle += 90;
+
+    rotate_targets.setAll('exists', false);
 }
