@@ -361,6 +361,53 @@ function update_health(){
     };
 }
 
+function knight_special(unit){
+    var n = [unit.x, unit.y - 100];
+    var e = [unit.x + 100, unit.y];
+    var s = [unit.x, unit.y + 100];
+    var w = [unit.x - 100, unit.y];
+
+    var all_directions = [n, e, s, w];
+
+    var to_extend = [];
+
+    var to_test = [];
+
+    var valid_tiles = [];
+
+    for (var i = 0; i < all_directions.length; i++) {
+        if (in_bounds(all_directions[i][0], all_directions[i][1]) && !occupied(all_directions[i][0], all_directions[i][1])){
+            to_extend.push(all_directions[i]);
+        }
+    }
+
+    for (var i = 0; i < to_extend.length; i++) {
+        switch (to_extend[i]) {
+            case n:
+                to_test.push(new Array(to_extend[i][0], to_extend[i][1] - 100));
+                break;
+            case e:
+                to_test.push(new Array(to_extend[i][0] + 100, to_extend[i][1]));
+                break;
+            case s:
+                to_test.push(new Array(to_extend[i][0], to_extend[i][1] + 100));
+                break;
+            case w:
+                to_test.push(new Array(to_extend[i][0] - 100, to_extend[i][1]));
+                break;
+        }
+    }
+
+    for (var i = 0; i < to_test.length; i++) {
+        if (in_bounds(to_test[i][0], to_test[i][1]) && !occupied(to_test[i][0], to_test[i][1])){
+            valid_tiles.push(to_test[i]);
+        }
+    }
+
+    acting_sprite = unit;
+    add_move_sprites(valid_tiles);
+}
+
 function mage_special(){
     rotate_targets.setAll('exists', true);
 }
