@@ -121,8 +121,8 @@ function create(){
     };
 
     blue_archer = game.add.sprite(50, 250, 'blue_archer');
-    blue_knight = game.add.sprite(250, 150, 'blue_knight');
-    blue_mage = game.add.sprite(550, 50, 'blue_mage');
+    blue_knight = game.add.sprite(450, 150, 'blue_knight');
+    blue_mage = game.add.sprite(450, 350, 'blue_mage');
     red_archer = game.add.sprite(550, 450, 'red_archer');
     red_archer.team = 'red';
     red_knight = game.add.sprite(250, 250, 'red_knight');
@@ -155,9 +155,7 @@ function create(){
 }
 
 function update(){
-    for (var i = 0; i < all_units.length; i++) {
-        all_units[i].children[0].setText(all_units[i].health);
-    };
+
 }
 
 function render(){
@@ -298,9 +296,49 @@ function archer_attack(unit){
     add_hit_sprites(valid_tiles);
 }
 
+function mage_attack(unit){
+    var n_sprite = sprite_from_point(unit.x, unit.y - 200);
+    var nne_sprite = sprite_from_point(unit.x + 100, unit.y - 200);
+    var ne_sprite = sprite_from_point(unit.x + 200, unit.y - 200);
+    var ene_sprite = sprite_from_point(unit.x + 200, unit.y - 100);
+    var e_sprite = sprite_from_point(unit.x + 200, unit.y);
+    var ese_sprite = sprite_from_point(unit.x + 200, unit.y + 100);
+    var se_sprite = sprite_from_point(unit.x + 200, unit.y + 200);
+    var sse_sprite = sprite_from_point(unit.x + 100, unit.y + 200);
+    var s_sprite = sprite_from_point(unit.x, unit.y + 200);
+    var ssw_sprite = sprite_from_point(unit.x - 100, unit.y + 200);
+    var sw_sprite = sprite_from_point(unit.x - 200, unit.y + 200);
+    var wsw_sprite = sprite_from_point(unit.x - 200, unit.y + 100);
+    var w_sprite = sprite_from_point(unit.x - 200, unit.y);
+    var wnw_sprite = sprite_from_point(unit.x - 200, unit.y - 100);
+    var nw_sprite = sprite_from_point(unit.x - 200, unit.y - 200);
+    var nnw_sprite = sprite_from_point(unit.x - 100, unit.y - 200);
+
+    var all_directions = [
+        n_sprite, nne_sprite, ne_sprite, ene_sprite,
+        e_sprite, ese_sprite, se_sprite, sse_sprite,
+        s_sprite, ssw_sprite, sw_sprite, wsw_sprite,
+        w_sprite, wnw_sprite, nw_sprite, nnw_sprite
+    ];
+
+    var valid_tiles = [];
+
+    acting_sprite = unit;
+
+    for (var i = 0; i < all_directions.length; i++) {
+        if (all_directions[i] !== undefined && !all_directions[i].is_terrain && all_directions[i].team !== acting_sprite.team && !has_line_of_sight(acting_sprite, all_directions[i])){
+            valid_tiles.push(new Array(all_directions[i].x, all_directions[i].y));
+        }
+    }
+
+    add_hit_sprites(valid_tiles);
+}
+
 function add_hit_sprites(tiles){
     for (var i = 0; i < tiles.length; i++) {
-        hit_targets.getFirstExists(false, false, tiles[i][0], tiles[i][1]);
+        if (sprite_from_point(tiles[i][0], tiles[i][1]).alive){
+            hit_targets.getFirstExists(false, false, tiles[i][0], tiles[i][1]);
+        }
     };
 }
 
@@ -308,7 +346,19 @@ function submit_hit(){
     target_sprite = sprite_from_point(this.x, this.y);
     target_sprite.health--;
 
+    update_health();
+
+    if (target_sprite.health <= 0){
+        target_sprite.kill();
+    }
+
     hit_targets.setAll('exists', false);
+}
+
+function update_health(){
+    for (var i = 0; i < all_units.length; i++) {
+        all_units[i].children[0].setText(all_units[i].health);
+    };
 }
 
 function mage_special(){
