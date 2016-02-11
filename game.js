@@ -2,7 +2,8 @@ var game = new Phaser.Game(700, 500, '', Phaser.CANVAS, {preload: preload, creat
 
 var acting_sprite,
     target_sprite,
-    sight_line;
+    sight_line,
+    archer_using_special;
 
 var all_lines = [];
 
@@ -155,11 +156,11 @@ function create(){
 }
 
 function update(){
-
+    
 }
 
 function render(){
-    game.debug.geom(sight_line);
+    // game.debug.geom(sight_line);
     
     for (var i = 0; i < all_lines.length; i++) {
         game.debug.geom(all_lines[i]);
@@ -344,9 +345,21 @@ function add_hit_sprites(tiles){
 
 function submit_hit(){
     target_sprite = sprite_from_point(this.x, this.y);
-    target_sprite.health--;
+
+    if (archer_using_special){
+        target_sprite.health -= 2;
+        acting_sprite.health--;
+    } else {
+        target_sprite.health--;
+    }
+
+    archer_using_special = false;
 
     update_health();
+
+    if (acting_sprite.health <= 0){
+        acting_sprite.kill();
+    }
 
     if (target_sprite.health <= 0){
         target_sprite.kill();
@@ -406,6 +419,11 @@ function knight_special(unit){
 
     acting_sprite = unit;
     add_move_sprites(valid_tiles);
+}
+
+function archer_special(unit){
+    archer_attack(unit);
+    archer_using_special = true;
 }
 
 function mage_special(){
