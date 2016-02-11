@@ -37,7 +37,6 @@ function create(){
     hit_targets = game.add.group();
     rotate_targets = game.add.group();
 
-    // "extended sprite"
     Target = function(game, x, y, key){
         Phaser.Sprite.call(this, game, x, y, key);
 
@@ -121,14 +120,14 @@ function create(){
         rotate_targets.setAll('exists', false);
     };
 
-    blue_archer = game.add.sprite(150, 250, 'blue_archer');
-    blue_knight = game.add.sprite(350, 50, 'blue_knight');
+    blue_archer = game.add.sprite(50, 250, 'blue_archer');
+    blue_knight = game.add.sprite(250, 150, 'blue_knight');
     blue_mage = game.add.sprite(550, 50, 'blue_mage');
     red_archer = game.add.sprite(550, 450, 'red_archer');
     red_archer.team = 'red';
-    red_knight = game.add.sprite(450, 250, 'red_knight');
+    red_knight = game.add.sprite(250, 250, 'red_knight');
     red_knight.team = 'red';
-    red_mage = game.add.sprite(250, 450, 'red_mage');
+    red_mage = game.add.sprite(250, 350, 'red_mage');
     red_mage.team = 'red';
 
     all_units = [
@@ -170,10 +169,6 @@ function render(){
 }
 
 function occupied(x, y){
-    // accepts a point (x, y coords)
-    // loop through all sprites, compare coords
-    // if point argument matches any sprite coords
-    // return true, else false
     for (var i = 0; i < all_sprites.length; i++) {
         if (x === all_sprites[i].x && y === all_sprites[i].y){
             return true;
@@ -202,11 +197,6 @@ function sprite_from_point(x, y){
 }
 
 function draw_lines(){
-    // grab terrain tile
-    // access lines at index, terrain.angle
-    // loop through returned array
-    // draw line at each item's coords
-    // push line onto global var of all lines
     all_lines = [];
     for (var i = 0; i < all_terrain.length; i++) {
         var line_array = lines[i][all_terrain[i].angle];
@@ -222,22 +212,14 @@ function move(unit){
     var s = [unit.x, unit.y + 100];
     var w = [unit.x - 100, unit.y];
 
+    var all_directions = [n, e, s, w];
+
     var valid_tiles = [];
 
-    if (in_bounds(n[0], n[1]) && !occupied(n[0], n[1])){
-        valid_tiles.push(n);
-    }
-
-    if (in_bounds(e[0], e[1]) && !occupied(e[0], e[1])){
-        valid_tiles.push(e);
-    }
-
-    if (in_bounds(s[0], s[1]) && !occupied(s[0], s[1])){
-        valid_tiles.push(s);
-    }
-
-    if (in_bounds(w[0], w[1]) && !occupied(w[0], w[1])){
-        valid_tiles.push(w);
+    for (var i = 0; i < all_directions.length; i++) {
+        if (in_bounds(all_directions[i][0], all_directions[i][1]) && !occupied(all_directions[i][0], all_directions[i][1])){
+            valid_tiles.push(all_directions[i]);
+        }
     }
 
     acting_sprite = unit;
@@ -258,34 +240,59 @@ function submit_move(){
 }
 
 function knight_attack(unit){
-    var n = [unit.x, unit.y - 100];
-    var e = [unit.x + 100, unit.y];
-    var s = [unit.x, unit.y + 100];
-    var w = [unit.x - 100, unit.y];
+    var n_sprite = sprite_from_point(unit.x, unit.y - 100);
+    var e_sprite = sprite_from_point(unit.x + 100, unit.y);
+    var s_sprite = sprite_from_point(unit.x, unit.y + 100);
+    var w_sprite = sprite_from_point(unit.x - 100, unit.y);
 
-    var n_sprite = sprite_from_point(n[0], n[1]);
-    var e_sprite = sprite_from_point(e[0], e[1]);
-    var s_sprite = sprite_from_point(s[0], s[1]);
-    var w_sprite = sprite_from_point(w[0], w[1]);
+    var all_directions = [n_sprite, e_sprite, s_sprite, w_sprite];
 
     var valid_tiles = [];
 
     acting_sprite = unit;
 
-    if (in_bounds(n[0], n[1]) && occupied(n[0], n[1]) && !n_sprite.is_terrain && n_sprite.team !== acting_sprite.team){
-        valid_tiles.push(n);
+    for (var i = 0; i < all_directions.length; i++) {
+        if (all_directions[i] !== undefined && !all_directions[i].is_terrain && all_directions[i].team !== acting_sprite.team){
+            valid_tiles.push(new Array(all_directions[i].x, all_directions[i].y));
+        }
     }
 
-    if (in_bounds(e[0], e[1]) && occupied(e[0], e[1]) && !e_sprite.is_terrain && e_sprite.team !== acting_sprite.team){
-        valid_tiles.push(e);
-    }
+    add_hit_sprites(valid_tiles);
+}
 
-    if (in_bounds(s[0], s[1]) && occupied(s[0], s[1]) && !s_sprite.is_terrain && s_sprite.team !== acting_sprite.team){
-        valid_tiles.push(s);
-    }
+function archer_attack(unit){
+    var n_sprite = sprite_from_point(unit.x, unit.y - 200);
+    var nne_sprite = sprite_from_point(unit.x + 100, unit.y - 200);
+    var ne_sprite = sprite_from_point(unit.x + 200, unit.y - 200);
+    var ene_sprite = sprite_from_point(unit.x + 200, unit.y - 100);
+    var e_sprite = sprite_from_point(unit.x + 200, unit.y);
+    var ese_sprite = sprite_from_point(unit.x + 200, unit.y + 100);
+    var se_sprite = sprite_from_point(unit.x + 200, unit.y + 200);
+    var sse_sprite = sprite_from_point(unit.x + 100, unit.y + 200);
+    var s_sprite = sprite_from_point(unit.x, unit.y + 200);
+    var ssw_sprite = sprite_from_point(unit.x - 100, unit.y + 200);
+    var sw_sprite = sprite_from_point(unit.x - 200, unit.y + 200);
+    var wsw_sprite = sprite_from_point(unit.x - 200, unit.y + 100);
+    var w_sprite = sprite_from_point(unit.x - 200, unit.y);
+    var wnw_sprite = sprite_from_point(unit.x - 200, unit.y - 100);
+    var nw_sprite = sprite_from_point(unit.x - 200, unit.y - 200);
+    var nnw_sprite = sprite_from_point(unit.x - 100, unit.y - 200);
 
-    if (in_bounds(w[0], w[1]) && occupied(w[0], w[1]) && !w_sprite.is_terrain && w_sprite.team !== acting_sprite.team){
-        valid_tiles.push(w);
+    var all_directions = [
+        n_sprite, nne_sprite, ne_sprite, ene_sprite,
+        e_sprite, ese_sprite, se_sprite, sse_sprite,
+        s_sprite, ssw_sprite, sw_sprite, wsw_sprite,
+        w_sprite, wnw_sprite, nw_sprite, nnw_sprite
+    ];
+
+    var valid_tiles = [];
+
+    acting_sprite = unit;
+
+    for (var i = 0; i < all_directions.length; i++) {
+        if (all_directions[i] !== undefined && !all_directions[i].is_terrain && all_directions[i].team !== acting_sprite.team && has_line_of_sight(acting_sprite, all_directions[i])){
+            valid_tiles.push(new Array(all_directions[i].x, all_directions[i].y));
+        }
     }
 
     add_hit_sprites(valid_tiles);
@@ -319,4 +326,12 @@ function submit_rotate(){
 
 function has_line_of_sight(unit, target){
     sight_line = new Phaser.Line(unit.x, unit.y, target.x, target.y);
+
+    for (var i = 0; i < all_lines.length; i++) {
+        if (sight_line.intersects(all_lines[i])){
+            return false;
+        }
+    };
+
+    return true;
 }
