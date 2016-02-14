@@ -1,9 +1,12 @@
 var game = new Phaser.Game(700, 500, '', Phaser.CANVAS, {preload: preload, create: create, update: update, render: render});
 
-var acting_sprite,
+var acting_team,
+    acting_sprite,
     target_sprite,
     sight_line,
     archer_using_special;
+
+var remaining_actions = 2;
 
 var all_lines = [];
 
@@ -21,9 +24,15 @@ function preload(){
     game.load.image('terrain_3', 'sprites/terrain_3.png');
     game.load.image('terrain_4', 'sprites/terrain_4.png');
     game.load.image('terrain_5', 'sprites/terrain_5.png');
+    game.load.image('menu_attack', 'sprites/menu_attack.png');
+    game.load.image('menu_move', 'sprites/menu_move.png');
+    game.load.image('menu_pass', 'sprites/menu_pass.png');
+    game.load.image('menu_special', 'sprites/menu_special.png');
+    game.load.image('menu_cancel', 'sprites/menu_cancel.png');
     game.load.spritesheet('move_target', 'sprites/move_target.png', 100, 100, 6);
     game.load.spritesheet('hit_target', 'sprites/hit_target.png', 100, 100, 6);
     game.load.spritesheet('rotate_target', 'sprites/rotate_target.png', 100, 100, 6);
+    game.load.spritesheet('unit_target', 'sprites/unit_target.png', 100, 100, 6);
     game.load.text('line_data', 'line_data.json');
 }
 
@@ -31,12 +40,14 @@ function create(){
     Phaser.Sprite.prototype.bound_lines = [];
     Phaser.Sprite.prototype.is_terrain = false;
     Phaser.Sprite.prototype.team = 'blue';
+    Phaser.Sprite.prototype.class = 'knight';
 
     game.add.sprite(0, 0, 'board');
 
     move_targets = game.add.group();
     hit_targets = game.add.group();
     rotate_targets = game.add.group();
+    unit_targets = game.add.group();
 
     Target = function(game, x, y, key){
         Phaser.Sprite.call(this, game, x, y, key);
@@ -79,6 +90,19 @@ function create(){
     RotateTarget.prototype = Object.create(Target.prototype);
     RotateTarget.prototype.constructor = RotateTarget;
 
+    UnitTarget = function(game, x, y, key){
+        Target.call(this, game, x, y, key);
+
+        this.events.onInputDown.add(function(){
+            acting_sprite = sprite_from_point(this.x, this.y);
+            unit_targets.setAll('exists', false);
+            open_menu();
+        }, this);
+    };
+
+    UnitTarget.prototype = Object.create(Target.prototype);
+    UnitTarget.prototype.constructor = UnitTarget;
+
     for (var i = 0; i < 8; i++) {
         move_target = new MoveTarget(game, 0, 0, 'move_target');
         move_targets.add(game.add.existing(move_target));
@@ -89,6 +113,10 @@ function create(){
         hit_target = new HitTarget(game, 0, 0, 'hit_target');
         hit_targets.add(game.add.existing(hit_target));
         hit_targets.setAll('exists', false);
+
+        unit_target = new UnitTarget(game, 0, 0, 'unit_target');
+        unit_targets.add(game.add.existing(unit_target));
+        unit_targets.setAll('exists', false);
     };
 
     terrain_0 = game.add.sprite(150, 150, 'terrain_0');
@@ -121,15 +149,19 @@ function create(){
         rotate_targets.setAll('exists', false);
     };
 
-    blue_archer = game.add.sprite(50, 250, 'blue_archer');
-    blue_knight = game.add.sprite(450, 150, 'blue_knight');
-    blue_mage = game.add.sprite(450, 350, 'blue_mage');
+    blue_archer = game.add.sprite(150, 50, 'blue_archer');
+    blue_archer.class = 'archer';
+    blue_knight = game.add.sprite(350, 50, 'blue_knight');
+    blue_mage = game.add.sprite(550, 50, 'blue_mage');
+    blue_mage.class = 'mage';
     red_archer = game.add.sprite(550, 450, 'red_archer');
     red_archer.team = 'red';
-    red_knight = game.add.sprite(250, 250, 'red_knight');
+    red_archer.class = 'archer';
+    red_knight = game.add.sprite(350, 450, 'red_knight');
     red_knight.team = 'red';
-    red_mage = game.add.sprite(250, 350, 'red_mage');
+    red_mage = game.add.sprite(150, 450, 'red_mage');
     red_mage.team = 'red';
+    red_mage.class = 'mage';
 
     all_units = [
         blue_archer,
@@ -153,18 +185,50 @@ function create(){
     game.world.bringToTop(rotate_targets);
 
     draw_lines();
+
+    menu = game.add.group();
+    menu.x = 225;
+    menu.y = 30;
+    menu.visible = false;
+    menu_attack = game.add.sprite(0, 0, 'menu_attack');
+    menu_move = game.add.sprite(0, 90, 'menu_move');
+    menu_special = game.add.sprite(0, 180, 'menu_special');
+    menu_pass = game.add.sprite(0, 270, 'menu_pass');
+    menu_cancel = game.add.sprite(0, 360, 'menu_cancel');
+
+    menu.add(menu_attack);
+    menu.add(menu_move);
+    menu.add(menu_special);
+    menu.add(menu_pass);
+    menu.add(menu_cancel);
+
+    remaining_actions_text = game.add.text(230, -25, remaining_actions, {fill: 'orange', fontSize: 40, stroke: 'black', strokeThickness: 10});
+    menu.add(remaining_actions_text);
+
+    menu.setAll('inputEnabled', true);
+    menu.setAll('input.useHandCursor', true);
+
+    menu_attack.events.onInputDown.add(function(){ dispatch_attack(acting_sprite) }, this);
+    menu_move.events.onInputDown.add(function(){ move(acting_sprite) }, this);
+    menu_special.events.onInputDown.add(function(){ dispatch_special(acting_sprite) }, this);
+    menu_pass.events.onInputDown.add(function(){ close_menu(); pass() }, this);
+    menu_cancel.events.onInputDown.add(function(){ close_menu(); unit_select() }, this);
+
+    acting_team = 'blue';
+
+    unit_select();
 }
 
 function update(){
-    
+    remaining_actions_text.setText(remaining_actions);
 }
 
 function render(){
     // game.debug.geom(sight_line);
     
-    for (var i = 0; i < all_lines.length; i++) {
-        game.debug.geom(all_lines[i]);
-    }
+    // for (var i = 0; i < all_lines.length; i++) {
+    //     game.debug.geom(all_lines[i]);
+    // }
 }
 
 function occupied(x, y){
@@ -206,6 +270,8 @@ function draw_lines(){
 }
 
 function move(unit){
+    close_menu();
+
     var n = [unit.x, unit.y - 100];
     var e = [unit.x + 100, unit.y];
     var s = [unit.x, unit.y + 100];
@@ -221,7 +287,6 @@ function move(unit){
         }
     }
 
-    acting_sprite = unit;
     add_move_sprites(valid_tiles);
 }
 
@@ -236,6 +301,26 @@ function submit_move(){
     acting_sprite.y = this.y;
 
     move_targets.setAll('exists', false);
+
+    check_actions();
+
+    unit_select();
+}
+
+function dispatch_attack(unit){
+    close_menu();
+
+    switch (unit.class){
+        case 'knight':
+            knight_attack(unit);
+            break;
+        case 'archer':
+            archer_attack(unit);
+            break;
+        case 'mage':
+            mage_attack(unit);
+            break;
+    }
 }
 
 function knight_attack(unit){
@@ -247,8 +332,6 @@ function knight_attack(unit){
     var all_directions = [n_sprite, e_sprite, s_sprite, w_sprite];
 
     var valid_tiles = [];
-
-    acting_sprite = unit;
 
     for (var i = 0; i < all_directions.length; i++) {
         if (all_directions[i] !== undefined && !all_directions[i].is_terrain && all_directions[i].team !== acting_sprite.team){
@@ -286,8 +369,6 @@ function archer_attack(unit){
 
     var valid_tiles = [];
 
-    acting_sprite = unit;
-
     for (var i = 0; i < all_directions.length; i++) {
         if (all_directions[i] !== undefined && !all_directions[i].is_terrain && all_directions[i].team !== acting_sprite.team && has_line_of_sight(acting_sprite, all_directions[i])){
             valid_tiles.push(new Array(all_directions[i].x, all_directions[i].y));
@@ -323,8 +404,6 @@ function mage_attack(unit){
     ];
 
     var valid_tiles = [];
-
-    acting_sprite = unit;
 
     for (var i = 0; i < all_directions.length; i++) {
         if (all_directions[i] !== undefined && !all_directions[i].is_terrain && all_directions[i].team !== acting_sprite.team && !has_line_of_sight(acting_sprite, all_directions[i])){
@@ -366,12 +445,32 @@ function submit_hit(){
     }
 
     hit_targets.setAll('exists', false);
+
+    check_actions();
+
+    unit_select();
 }
 
 function update_health(){
     for (var i = 0; i < all_units.length; i++) {
         all_units[i].children[0].setText(all_units[i].health);
     };
+}
+
+function dispatch_special(unit){
+    close_menu();
+
+    switch (unit.class){
+        case 'knight':
+            knight_special(unit);
+            break;
+        case 'archer':
+            archer_special(unit);
+            break;
+        case 'mage':
+            mage_special(unit);
+            break;
+    }
 }
 
 function knight_special(unit){
@@ -417,7 +516,6 @@ function knight_special(unit){
         }
     }
 
-    acting_sprite = unit;
     add_move_sprites(valid_tiles);
 }
 
@@ -437,6 +535,10 @@ function submit_rotate(){
     rotate_targets.setAll('exists', false);
 
     draw_lines();
+
+    check_actions();
+
+    unit_select();
 }
 
 function has_line_of_sight(unit, target){
@@ -450,3 +552,65 @@ function has_line_of_sight(unit, target){
 
     return true;
 }
+
+function open_menu(){
+    menu.visible = true;
+}
+
+function close_menu(){
+    menu.visible = false;
+}
+
+function unit_select(){
+    for (var i = 0; i < all_units.length; i++) {
+        if (all_units[i].team === acting_team){
+            unit_targets.getFirstExists(false, false, all_units[i].x, all_units[i].y);
+        }
+    }
+}
+
+function pass(){
+    acting_team = acting_team === 'blue' ? 'red' : 'blue';
+
+    unit_targets.setAll('exists', false);
+
+    remaining_actions = 2;
+
+    unit_select();
+}
+
+function check_actions(){
+    remaining_actions--;
+
+    if (remaining_actions <= 0){
+        pass();
+        remaining_actions = 2;
+    }
+}
+
+/*
+
+MOVE:
+    • close menu
+    • store reference to unit directly beneath clicked unit target
+    • pass unit into move() function
+
+ATTACK:
+    • close menu
+    • store reference to unit directly beneath clicked unit target
+    • pass unit into dispatch_attack() function
+
+SPECIAL:
+    • close menu
+    • store reference to unit directly beneath clicked unit target
+    • pass unit into dispatch_special() function
+
+PASS:
+    • close menu
+    • switch acting team
+    • pass acting team to unit_select() function
+
+CANCEL:
+    • close menu
+
+*/
