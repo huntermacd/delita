@@ -151,14 +151,18 @@ function create(){
 
     blue_archer = game.add.sprite(150, 50, 'blue_archer');
     blue_archer.class = 'archer';
+    blue_archer.health = 2;
     blue_knight = game.add.sprite(350, 50, 'blue_knight');
+    blue_knight.health = 3;
     blue_mage = game.add.sprite(550, 50, 'blue_mage');
     blue_mage.class = 'mage';
     red_archer = game.add.sprite(550, 450, 'red_archer');
     red_archer.team = 'red';
     red_archer.class = 'archer';
+    red_archer.health = 2;
     red_knight = game.add.sprite(350, 450, 'red_knight');
     red_knight.team = 'red';
+    red_knight.health = 3;
     red_mage = game.add.sprite(150, 450, 'red_mage');
     red_mage.team = 'red';
     red_mage.class = 'mage';
@@ -174,7 +178,6 @@ function create(){
 
     for (var i = 0; i < all_units.length; i++) {
         all_units[i].anchor.setTo(0.5);
-        all_units[i].health = 2;
         all_units[i].addChild(game.add.text(-4, -12, all_units[i].health, {fontSize: 16}));
     };
 
@@ -291,6 +294,13 @@ function move(unit){
 }
 
 function add_move_sprites(tiles){
+    if (tiles.length === 0){
+        var msg = game.add.text(game.world.centerX, game.world.centerY, 'No valid moves!', {fill: 'red', fontSize: 20, stroke: 'black', strokeThickness: 5});
+        msg.anchor.setTo(0.5);
+        game.time.events.add(2000, function(){ msg.destroy() }, this);
+        return unit_select();
+    }
+
     for (var i = 0; i < tiles.length; i++) {
         move_targets.getFirstExists(false, false, tiles[i][0], tiles[i][1]);
     };
@@ -415,11 +425,18 @@ function mage_attack(unit){
 }
 
 function add_hit_sprites(tiles){
+    if (tiles.length === 0){
+        var msg = game.add.text(game.world.centerX, game.world.centerY, 'No valid targets!', {fill: 'red', fontSize: 20, stroke: 'black', strokeThickness: 5});
+        msg.anchor.setTo(0.5);
+        game.time.events.add(2000, function(){ msg.destroy() }, this);
+        return unit_select();
+    }
+
     for (var i = 0; i < tiles.length; i++) {
         if (sprite_from_point(tiles[i][0], tiles[i][1]).alive){
             hit_targets.getFirstExists(false, false, tiles[i][0], tiles[i][1]);
         }
-    };
+    }
 }
 
 function submit_hit(){
@@ -438,10 +455,14 @@ function submit_hit(){
 
     if (acting_sprite.health <= 0){
         acting_sprite.kill();
+        acting_sprite.x = -200;
+        acting_sprite.y = -200;
     }
 
     if (target_sprite.health <= 0){
         target_sprite.kill();
+        target_sprite.x = -200;
+        target_sprite.y = -200;
     }
 
     hit_targets.setAll('exists', false);
@@ -563,7 +584,7 @@ function close_menu(){
 
 function unit_select(){
     for (var i = 0; i < all_units.length; i++) {
-        if (all_units[i].team === acting_team){
+        if (all_units[i].team === acting_team && all_units[i].alive === true){
             unit_targets.getFirstExists(false, false, all_units[i].x, all_units[i].y);
         }
     }
